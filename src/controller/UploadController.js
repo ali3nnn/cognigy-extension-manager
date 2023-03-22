@@ -60,7 +60,6 @@ class UploadController {
         this.extensionName = params.name;
         this.rootPath = this.getRootPath();
         this.extensionPath = this.getExtensionPath();
-        console.log(this);
     }
     getConfigFile(relativeConfigPath) {
         const absConfigPath = (0, path_1.resolve)(relativeConfigPath);

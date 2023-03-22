@@ -46,8 +46,6 @@ export default class UploadController {
             this.extensionName = params.name
             this.rootPath = this.getRootPath()
             this.extensionPath = this.getExtensionPath()
-
-            console.log(this)
     }
 
     private getConfigFile(relativeConfigPath: string): Config {
