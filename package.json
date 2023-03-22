@@ -1,6 +1,6 @@
 {
   "name": "cognigy-extension-manager",
-  "version": "0.0.8",
+  "version": "0.1.9",
   "description": "Cognigy Extension Manager",
   "main": "src/handler.js",
   "bin": {
@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
-    "bootstrap": "rm -rf ./**/*.js"
+    "bootstrap": "rm -rf src/**/*.js"
   },
   "dependencies": {
     "@types/axios": "^0.14.0",

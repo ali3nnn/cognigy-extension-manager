@@ -1,50 +1,69 @@
 import axios, { AxiosRequestHeaders } from "axios";
 import { readFileSync } from "fs";
-import { basename } from "path";
+import { basename, resolve } from "path";
 import FormData = require("form-data")
 const untar = require("untar-to-memory");
 import * as dotenv from "dotenv";
 import https from 'https';
-import { CognigyMeta, ITask } from "../utils/Interfaces";
+import { CognigyMeta, Config, ITask } from "../utils/Interfaces";
 dotenv.config({ path: '../.env' });
 
 export default class UploadController {
     private apiKey: string | undefined;
     private projectId: string | undefined;
-    private path: string | undefined;
+    private extensionPath: string | undefined;
     private extensionMeta: CognigyMeta;
     private baseHeaders: AxiosRequestHeaders;
     private task: ITask;
     private axiosAgent: https.Agent;
+    private extensionName: string;
+    private rootPath: string;
 
     constructor() {
-        this.apiKey = process.env.C_API_KEY;
-        this.projectId = process.env.PROJECT_ID;
-        this.path = process.env.EXTENSION_PATH;
+        this.apiKey = '';
+        this.projectId = '';
+        this.extensionPath = '';
         this.extensionMeta = {} as CognigyMeta;
         this.baseHeaders = {}
         this.task = {} as ITask
         this.axiosAgent = new https.Agent({
             rejectUnauthorized: false
         });
+        this.rootPath = ''
+        this.extensionName = '';
     }
 
-    loadConfigFile(): void | Error {
-        const isEnvVariable = this.isEnvVariable()
-        if (isEnvVariable) {
-            return;
-        } else {
-            try {
-                const pathToConfigFile = __dirname.split('/').slice(0, 5).join('/') + '/project.config.json'
-                const rawConfigFile = readFileSync(pathToConfigFile, 'utf-8')
-                const config = JSON.parse(rawConfigFile)
-                this.apiKey = config.C_API_KEY
-                this.projectId = config.PROJECT_ID
-                this.path = config.EXTENSION_PATH
-            } catch (err: any) {
-                throw new Error(err)
+    loadConfig(): void {
+            const arg = process.argv.slice(2)
+            const params = {
+                configPath: arg[0],
+                name: arg[1]
             }
-        }
+
+            const config = this.getConfigFile(params.configPath)
+            this.apiKey = config.C_API_KEY
+            this.projectId = config.PROJECT_ID
+            this.extensionName = params.name
+            this.rootPath = this.getRootPath()
+            this.extensionPath = this.getExtensionPath()
+
+            console.log(this)
+    }
+
+    private getConfigFile(relativeConfigPath: string): Config {
+        const absConfigPath = resolve(relativeConfigPath);
+        const rawConfigFile = readFileSync(absConfigPath, 'utf-8')
+        return JSON.parse(rawConfigFile)
+    }
+
+    private getExtensionPath() {
+        const extensionPath = `${this.rootPath}/${this.extensionName}-extension.tar.gz`
+        return extensionPath
+    }
+
+    private getRootPath(): string {
+        const rootPath = resolve(process.argv.slice(2)[0]).split('/').slice(0,-1).join('/')
+        return rootPath
     }
 
     private createBaseHeaders() {
@@ -55,20 +74,12 @@ export default class UploadController {
         }
     }
 
-    private isEnvVariable(): boolean {
-        if (this.apiKey && this.projectId && this.path) {
-            return true
-        }
-        return false
-    }
-
     async isExtension(): Promise<boolean | Error> {
         this.createBaseHeaders()
         const headers: AxiosRequestHeaders = {
             ...this.baseHeaders
         }
-        const extensionName = await this.getExtensionNameFromZip()
-        const url = `https://api-eon.cognigy.cloud/new/v2.0/extensions?projectId=${this.projectId}&filter=${extensionName}`
+        const url = `https://api-eon.cognigy.cloud/new/v2.0/extensions?projectId=${this.projectId}&filter=${this.extensionName}`
         try {
             const isExtension = await axios.get(url, { headers, httpsAgent: this.axiosAgent })
             this.setExtensionMeta(isExtension.data)
@@ -76,18 +87,6 @@ export default class UploadController {
         } catch (err: any) {
             throw new Error(err)
         }
-    }
-
-    private async getExtensionNameFromZip(): Promise<string | void> {
-        return await new Promise<void>((accept, reject) => {
-            untar.readEntry(this.path as string, "package.json", null, (error: Error, buff: Buffer) => {
-                if (error) {
-                    return reject(error);
-                }
-                const packageJson = JSON.parse(buff.toString("utf-8"));
-                accept(packageJson.name);
-            });
-        });
     }
 
     private setExtensionMeta(meta: object) {
@@ -133,14 +132,14 @@ export default class UploadController {
     }
 
     private buildArtifact() {
-        const fileToUpload = this.readLocalExtension(this.path as string)
+        const fileToUpload = this.readLocalExtension(this.extensionPath as string)
         const artifact = new FormData();
         artifact.append("projectId", this.projectId as string);
         if (this.isUpload()) {
             artifact.append("extension", this.extensionMeta.items[0]._id);
         }
         artifact.append("file", fileToUpload, {
-            filename: basename(this.path as string) + "_CU"
+            filename: basename(this.extensionPath as string) + "_CU"
         });
         return artifact
     }
@@ -172,12 +171,12 @@ export default class UploadController {
                 });
                 this.task = data
                 const elapsedTime = Math.round((Date.now() - startTime) / 1000)
-                process.stdout.write(`\rElapsed time ${elapsedTime}s `)
+                process.stdout.write(`\rElapsed time ${elapsedTime}s | ${this.task.currentStep}%`)
             } catch (err: any) {
                 throw new Error(`\n${err}`)
             }
         }
-        console.log("\nUploading task completed")
+        console.log("\nTask completed")
 
     }
 
@@ -194,9 +193,8 @@ export default class UploadController {
     }
 
     private async setTrustedExtension() {
-        const extensionName = await this.getExtensionNameFromZip() as string
         const projectId = this.projectId as string
-        const extensionMeta = await this.getExtensionMetadata(projectId, extensionName)
+        const extensionMeta = await this.getExtensionMetadata(projectId, this.extensionName)
 
         console.log(`Trusting extension with ID ${extensionMeta._id}`);
 
@@ -208,7 +206,7 @@ export default class UploadController {
                 httpsAgent: this.axiosAgent
             })
             if (updateReponse.status === 204) {
-                console.log('Extension uploaded successfully!');
+                console.log('Task completed');
             } else {
                 throw new Error(updateReponse as any)
             }

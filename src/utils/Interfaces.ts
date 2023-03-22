@@ -37,3 +37,8 @@ export interface ITask {
     currentStep: number;
     totalStep: number;
 }
+
+export interface Config {
+    C_API_KEY: string;
+    PROJECT_ID: string;
+}

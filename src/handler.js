@@ -8,7 +8,7 @@ exports.handler = void 0;
 const UploadController_1 = __importDefault(require("./controller/UploadController"));
 const handler = async () => {
     const controller = new UploadController_1.default();
-    controller.loadConfigFile();
+    controller.loadConfig();
     const isExtension = await controller.isExtension();
     if (isExtension) {
         controller.updateExtension();
