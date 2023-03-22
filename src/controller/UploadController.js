@@ -53,10 +53,7 @@ class UploadController {
         }
         else {
             try {
-                // const pathToConfigFile = process.argv[1].split('/').slice(0, -3).join('/') + '/project.config.json'
                 const pathToConfigFile = __dirname.split('/').slice(0, 5).join('/') + '/project.config.json';
-                console.log("__dirname", __dirname);
-                console.log("pathToConfigFile", pathToConfigFile);
                 const rawConfigFile = (0, fs_1.readFileSync)(pathToConfigFile, 'utf-8');
                 const config = JSON.parse(rawConfigFile);
                 this.apiKey = config.C_API_KEY;
@@ -77,7 +74,6 @@ class UploadController {
     }
     isEnvVariable() {
         if (this.apiKey && this.projectId && this.path) {
-            // console.log(this)
             return true;
         }
         return false;
@@ -88,7 +84,6 @@ class UploadController {
             ...this.baseHeaders
         };
         const extensionName = await this.getExtensionNameFromZip();
-        // const extensionName = 'open-ai'
         const url = `https://api-eon.cognigy.cloud/new/v2.0/extensions?projectId=${this.projectId}&filter=${extensionName}`;
         try {
             const isExtension = await axios_1.default.get(url, { headers, httpsAgent: this.axiosAgent });
