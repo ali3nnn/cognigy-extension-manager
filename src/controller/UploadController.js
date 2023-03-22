@@ -49,6 +49,7 @@ class UploadController {
         this.extensionName = '';
     }
     loadConfig() {
+        this.isArg();
         const arg = process.argv.slice(2);
         const params = {
             configPath: arg[0],
@@ -60,6 +61,12 @@ class UploadController {
         this.extensionName = params.name;
         this.rootPath = this.getRootPath();
         this.extensionPath = this.getExtensionPath();
+    }
+    isArg() {
+        if (process.argv.length <= 2) {
+            console.log("You should provide 2 arguments: a config file and name of extension (eg.: npm run <script> config.json extension-name)");
+            process.exit(1);
+        }
     }
     getConfigFile(relativeConfigPath) {
         const absConfigPath = (0, path_1.resolve)(relativeConfigPath);
