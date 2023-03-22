@@ -71,11 +71,20 @@ class UploadController {
     getConfigFile(relativeConfigPath) {
         const absConfigPath = (0, path_1.resolve)(relativeConfigPath);
         const rawConfigFile = (0, fs_1.readFileSync)(absConfigPath, 'utf-8');
-        return JSON.parse(rawConfigFile);
+        const config = JSON.parse(rawConfigFile);
+        if (config.C_API_KEY && config.PROJECT_ID) {
+            return config;
+        }
+        console.log("The config file is wrong");
+        process.exit(1);
     }
     getExtensionPath() {
         const extensionPath = `${this.rootPath}/${this.extensionName}-extension.tar.gz`;
-        return extensionPath;
+        if ((0, fs_1.existsSync)(extensionPath)) {
+            return extensionPath;
+        }
+        console.log("Extension not found. Did you enter the correct name?");
+        process.exit(1);
     }
     getRootPath() {
         const rootPath = (0, path_1.resolve)(process.argv.slice(2)[0]).split('/').slice(0, -1).join('/');
