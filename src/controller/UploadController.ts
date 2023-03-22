@@ -1,5 +1,5 @@
 import axios, { AxiosRequestHeaders } from "axios";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { basename, resolve } from "path";
 import FormData = require("form-data")
 const untar = require("untar-to-memory");
@@ -35,6 +35,7 @@ export default class UploadController {
 
     loadConfig(): void {
             this.isArg()
+
             const arg = process.argv.slice(2)
             const params = {
                 configPath: arg[0],
@@ -59,12 +60,21 @@ export default class UploadController {
     private getConfigFile(relativeConfigPath: string): Config {
         const absConfigPath = resolve(relativeConfigPath);
         const rawConfigFile = readFileSync(absConfigPath, 'utf-8')
-        return JSON.parse(rawConfigFile)
+        const config = JSON.parse(rawConfigFile)
+        if(config.C_API_KEY && config.PROJECT_ID) {
+            return config
+        }
+        console.log("The config file is wrong")
+        process.exit(1) 
     }
 
     private getExtensionPath() {
         const extensionPath = `${this.rootPath}/${this.extensionName}-extension.tar.gz`
-        return extensionPath
+        if(existsSync(extensionPath)) {
+            return extensionPath
+        } 
+        console.log("Extension not found. Did you enter the correct name?")
+        process.exit(1) 
     }
 
     private getRootPath(): string {
