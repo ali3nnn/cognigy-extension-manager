@@ -23,4 +23,8 @@ npm exec cu.upload-handler config.json extension-name
 
 ```extension-name``` - is the name of application. The same name as in ```package.json```
 
+---
+
 If you'd like to contribute to improve the extension, you can raise a pull reuqest here https://github.com/ali3nnn/cognigy-extension-manager
+
+Further improvements: add the posibility to upload the same extension to multiple projects automatically.
