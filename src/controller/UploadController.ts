@@ -59,6 +59,10 @@ export default class UploadController {
 
     private getConfigFile(relativeConfigPath: string): Config {
         const absConfigPath = resolve(relativeConfigPath);
+        if(!existsSync(absConfigPath)) {
+            console.log("Config file not found")
+            process.exit(1) 
+        }
         const rawConfigFile = readFileSync(absConfigPath, 'utf-8')
         const config = JSON.parse(rawConfigFile)
         if(config.C_API_KEY && config.PROJECT_ID) {
