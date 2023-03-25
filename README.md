@@ -21,10 +21,12 @@ npm exec cu.upload-handler config.json extension-name
 
 ```config.json``` - is a json file having the following keys ```C_API_KEY``` and ```PROJECT_ID```.
 
-```extension-name``` - is the name of application. The same name as in ```package.json```
+```extension-name``` - is the name of extension. The same name as in ```package.json```
 
 ---
 
 If you'd like to contribute to improve the extension, you can raise a pull reuqest here https://github.com/ali3nnn/cognigy-extension-manager
 
-Further improvements: add the posibility to upload the same extension to multiple projects automatically.
+Further improvements: 
+1. adding the posibility to upload the same extension to multiple projects automatically.
+2. getting the extension name from ```package.json```
