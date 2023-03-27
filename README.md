@@ -19,9 +19,25 @@ chmod +x node_modules/.bin/cu.upload-handler
 npm exec cu.upload-handler config.json extension-name
 ```
 
-```config.json``` - is a json file having the following keys ```C_API_KEY``` and ```PROJECT_ID```.
+```config.json``` - is a json file with an object containing ```C_API_KEY``` and ```PROJECT_ID``` for multiple projects as in the following example:
+
+```json
+{
+    "project1": {
+        "C_API_KEY": "api_key",
+        "PROJECT_ID": "project_id"
+    },
+    "project2": {
+        "C_API_KEY": "api_key_2",
+        "PROJECT_ID": "project_id_1"
+    }
+}
+```
 
 ```extension-name``` - is the name of extension. The same name as in ```package.json```
+
+```project-name``` - is the name of project you want to deploy to (eg.: ```project1```, ```project2```). It can also have the value ```all```, in which case all projects will be updated.
+
 
 ---
 

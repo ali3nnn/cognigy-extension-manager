@@ -16,29 +16,38 @@ export interface CognigyMeta {
 
 export interface ITask {
     _id: string;
-    createdAt: number;
-    createdBy: string;
-    lastChanged: number;
-    lastChangedBy: string;
-    status: 'queued' | 'active' | 'done' | 'error';
-    data: {
-        redisKey: string;
-        extension: string;
-        userId: string;
-        projectId: string;
-        organisationId: string;
-        traceId: string;
-        disableSensitiveLogging: boolean;
-    };
-    failReason: string | null;
-    name: string;
-    lastRunAt: string;
-    lastFinishedAt: string | null;
-    currentStep: number;
-    totalStep: number;
+    status: string,
+    type: string,
+    parameters: {
+        redisKey: string,
+        fileName: string,
+        extension: string,
+        userId: string,
+        projectId: string,
+        organisationId: string,
+        traceId: string,
+        disableSensitiveLogging: boolean
+    },
+    createdAt: number,
+    lastChangedAt: number,
+    progress: number
 }
+
+
 
 export interface Config {
     C_API_KEY: string;
     PROJECT_ID: string;
+    META?: CognigyItem[];
+    UPDATE?: boolean;
+    TASK?: ITask;
 }
+
+export interface NewConfig {
+    [key: string]: {
+        C_API_KEY: string;
+        PROJECT_ID: string;
+    }
+}
+
+export type ProjectConfig = Array<[string, Config]>
