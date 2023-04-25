@@ -2,11 +2,15 @@ import axios, { AxiosRequestHeaders, AxiosResponse } from "axios";
 import { readFileSync, existsSync } from "fs";
 import { basename, resolve } from "path";
 import FormData = require("form-data")
-const untar = require("untar-to-memory");
 import * as dotenv from "dotenv";
 import https from 'https';
 import { Config, NewConfig, ProjectConfig, ITask, CognigyItem } from "../utils/Interfaces";
 dotenv.config({ path: '../.env' });
+
+type CommandLineArguments = {
+    configPath: string,
+    project: string
+};
 
 export default class UploadController {
     private config: ProjectConfig;
@@ -15,29 +19,50 @@ export default class UploadController {
     private axiosAgent: https.Agent;
     private extensionName: string;
     private rootPath: string;
+    private isDevEnvironment: boolean;
 
     constructor() {
         this.extensionPath = '';
         this.config = [];
         this.baseHeaders = {}
-        this.axiosAgent = new https.Agent({
-            rejectUnauthorized: false
-        });
+        this.axiosAgent = new https.Agent();
         this.rootPath = ''
         this.extensionName = '';
+        this.isDevEnvironment = false
+    }
+
+    private setEnvironment(): void {
+        this.isDevEnvironment = process.argv.indexOf('--dev') !== -1
+    }
+
+    private setAxiosAgent(): void {
+        this.setEnvironment()
+        if (this.isDevEnvironment) {
+            this.axiosAgent = new https.Agent({
+                rejectUnauthorized: false
+            })
+            return;
+        }
+        this.axiosAgent = new https.Agent();
+    }
+
+    private getCommandLineArguments(): CommandLineArguments {
+        const arg = process.argv.slice(2)
+        return {
+            configPath: arg[0],
+            project: arg[1]
+        }
     }
 
     loadConfig(): void {
-        this.isArg()
+        this.isArg() // Check if there are CLI arguments present
+        this.setAxiosAgent() // Set the axios agent based on '--dev' cli flag
 
         const arg = process.argv.slice(2)
-        const params = {
-            configPath: arg[0],
-            name: arg[1],
-            project: arg[2]
-        }
+        const params = this.getCommandLineArguments()
 
-        const config = this.getNewConfigFile(params.configPath)
+        const config = this.getConfigFile(params.configPath)
+
         if (params.project === 'all') {
             this.config = Object.entries(config)
         } else {
@@ -54,19 +79,32 @@ export default class UploadController {
             process.exit(1)
         }
 
-        this.extensionName = params.name
+        // @ts-ignore
+        this.config = this.addApiKeys()
+        this.extensionName = this.getExtensionName()
         this.rootPath = this.getRootPath()
         this.extensionPath = this.getExtensionPath()
     }
 
     private isArg() {
         if (process.argv.length <= 2) {
-            console.log("You should provide 2 arguments: a config file and name of extension (eg.: npm run <script> config.json extension-name)")
+            console.log("You should provide 2 arguments: a config file, and the project name from the config file (eg.: npm run <script> config.json project-name)")
             process.exit(1)
         }
     }
 
-    private getNewConfigFile(relativeConfigPath: string): NewConfig {
+    private getExtensionName() {
+        const absPackageJsonPath = resolve('package.json');
+        if (!existsSync(absPackageJsonPath)) {
+            console.log("package.json file not found")
+            process.exit(1)
+        }
+        const rawPackageJson = readFileSync(absPackageJsonPath, 'utf-8')
+        const packageJson = JSON.parse(rawPackageJson)
+        return packageJson.name
+    }
+
+    private getConfigFile(relativeConfigPath: string): NewConfig {
         const absConfigPath = resolve(relativeConfigPath);
         if (!existsSync(absConfigPath)) {
             console.log("Config file not found")
@@ -75,6 +113,31 @@ export default class UploadController {
         const rawConfigFile = readFileSync(absConfigPath, 'utf-8')
         const config = JSON.parse(rawConfigFile)
         return config
+    }
+
+    private addApiKeys() {
+        // Check if there is C_API_KEY for the first project.
+        // If yes, then return the config object intact
+        if (this.config[0][1].C_API_KEY) {
+            return this.config
+        }
+        // If not, then re-write the config object so that it has C_API_KEY from env variables
+        return this.config.map(project => {
+            return [project[0], {
+                ...project[1],
+                C_API_KEY: this.getApiKeyForProject(project[0])
+            }]
+        })
+    }
+
+    private getApiKeyForProject(projectName: string): string | undefined {
+        const apiKey = process.env?.[`${projectName}_API_KEY`]
+        if (apiKey) {
+            console.log(`Api key retrieved successfully for project ${projectName}`)
+            return apiKey
+        }
+        console.log(`There is no api key for this project. Environment variable ${projectName}_API_KEY is expected.`)
+        process.exit(1)
     }
 
     private getExtensionPath() {
@@ -171,38 +234,38 @@ export default class UploadController {
 
     private async uploadNewExtension(projectName: string, extensionFile: FormData): Promise<AxiosResponse<ITask>> {
         console.log(`Upload new extension in ${projectName}`)
-        const response = await axios.post(`https://api-eon.cognigy.cloud/new/v2.0/extensions/upload`, extensionFile, {
-            headers: {
-                ...this.baseHeaders,
-                'Content-Type': 'multipart/form-data'
-            },
-            httpsAgent: this.axiosAgent
-        }).catch(err => {
-            console.log("\nFailed to check create upload task",err.response.data);
-            process.exit(1)
-        });
-
-        return response
+        try {
+            return await axios.post(`https://api-eon.cognigy.cloud/new/v2.0/extensions/upload`, extensionFile, {
+                headers: {
+                    ...this.baseHeaders,
+                    'Content-Type': 'multipart/form-data'
+                },
+                httpsAgent: this.axiosAgent
+            })
+        } catch (err: any) {
+            console.log(`\nFailed to create upload task for ${projectName}`, err.response.data);
+            return err
+        }
     }
 
     public async updateExtension(projectName: string, extensionFile: FormData): Promise<AxiosResponse<ITask>> {
         console.log(`Update extension in ${projectName}`)
-        const response = await axios.post(`https://api-eon.cognigy.cloud/new/v2.0/extensions/update`, extensionFile, {
-            headers: {
-                ...this.baseHeaders,
-                'Content-Type': 'multipart/form-data'
-            },
-            httpsAgent: this.axiosAgent
-        }).catch(err => {
-            console.log("\nFailed to check create update task",err.response.data);
-            process.exit(1)
-        });
-
-        return response
+        try {
+            return await axios.post(`https://api-eon.cognigy.cloud/new/v2.0/extensions/update`, extensionFile, {
+                headers: {
+                    ...this.baseHeaders,
+                    'Content-Type': 'multipart/form-data'
+                },
+                httpsAgent: this.axiosAgent
+            })
+        } catch (err: any) {
+            console.log(`\nFailed to create update task ${projectName}`, err.response.data);
+            return err
+        }
     }
 
     public async taskCompletion() {
-        this.config.forEach(async project => {
+        const taskPromises = this.config.map(async project => {
 
             let { data } = await this.isTaskCompleted(project[1].TASK!._id, project[1].C_API_KEY)
 
@@ -211,6 +274,10 @@ export default class UploadController {
             while (data.status !== 'done') {
                 if (data.status === 'error') {
                     console.log('\nTask with id', data._id, 'failed. Metadata:', data);
+                    return {
+                        project: project[0],
+                        task: project[1].TASK!._id
+                    }
                 }
 
                 await new Promise<void>(a => setTimeout(() => a(), 1000)); // sleep 1s
@@ -228,7 +295,23 @@ export default class UploadController {
             console.log(`\nTask completed for project ${project[0]}`)
 
             await this.setTrustedExtension(project)
+
+            return null
         })
+
+        const extensionId = await this.getExtensionId(project)
+        console.log(`Trusting extension ${extensionId} for ${project[0]}`);
+        try {
+            const results = await Promise.all(taskPromises);
+            const failedTasks = results.filter(task => task !== null);
+            if (failedTasks.length > 0) {
+                console.log('Failed tasks:', failedTasks);
+            } else {
+                console.log('All tasks completed successfully.');
+            }
+        } catch (err) {
+            console.log('Error occurred while waiting for all tasks to complete:', err);
+        }
 
     }
 

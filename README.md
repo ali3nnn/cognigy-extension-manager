@@ -16,33 +16,39 @@ chmod +x node_modules/.bin/cu.upload-handler
 
 3. Run the script
 ```bash
-npm exec cu.upload-handler config.json extension-name
+npm exec cu.upload-handler config.json PROJECT_1
+```
+
+```bash
+npm exec cu.upload-handler config.json all
 ```
 
 ```config.json``` - is a json file with an object containing ```C_API_KEY``` and ```PROJECT_ID``` for multiple projects as in the following example:
 
 ```json
 {
-    "project1": {
+    "PROJECT_1": {
         "C_API_KEY": "api_key",
         "PROJECT_ID": "project_id"
     },
-    "project2": {
+    "PROJECT_2": {
         "C_API_KEY": "api_key_2",
         "PROJECT_ID": "project_id_1"
     }
 }
 ```
 
-```extension-name``` - is the name of extension. The same name as in ```package.json```
+```PROJECT_1``` - is the name of project you want to deploy to. It can also have the value ```all```, in which case all projects will be updated.
 
-```project-name``` - is the name of project you want to deploy to (eg.: ```project1```, ```project2```). It can also have the value ```all```, in which case all projects will be updated.
+If ```C_API_KEY``` is missing from ```config.json```, then the script will check if there is an environment variable with the following name: ```PROJECT_1_API_KEY```. If there is no api key, the upload process will not start.
+
+By adding the flag ```--dev``` at the end of the CLI command will set the axios agent not to reject unauthorized certificates. In production it shouldn't use this flag.
+
+example: ```npm exec cu.add-extension config.json PROJECT_1 --dev```
 
 
 ---
 
 If you'd like to contribute to improve the extension, you can raise a pull reuqest here https://github.com/ali3nnn/cognigy-extension-manager
 
-Further improvements: 
-1. adding the posibility to upload the same extension to multiple projects automatically.
-2. getting the extension name from ```package.json```
+Further improvements: take the extension name from package.json
