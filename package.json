@@ -1,6 +1,6 @@
 {
   "name": "cognigy-extension-manager",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Cognigy Extension Manager",
   "main": "src/handler.js",
   "bin": {
