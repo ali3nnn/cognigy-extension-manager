@@ -1,15 +1,15 @@
 {
   "name": "cognigy-extension-manager",
-  "version": "0.1.14",
+  "version": "0.4.2",
   "description": "Cognigy Extension Manager",
   "main": "src/handler.js",
   "bin": {
     "cu.upload-handler": "./src/handler.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npx tsc",
-    "bootstrap": "rm -rf src/**/*.js"
+    "bootstrap": "rm -rf src/**/*.js",
+    "publish-extension": "npm run bootstrap && npm run build && npm publish"
   },
   "dependencies": {
     "@types/axios": "^0.14.0",
@@ -33,4 +33,3 @@
   },
   "homepage": "https://github.com/ali3nnn/cognigy-extension-manager#readme"
 }
-
