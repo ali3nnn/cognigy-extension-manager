@@ -299,8 +299,6 @@ export default class UploadController {
             return null
         })
 
-        const extensionId = await this.getExtensionId(project)
-        console.log(`Trusting extension ${extensionId} for ${project[0]}`);
         try {
             const results = await Promise.all(taskPromises);
             const failedTasks = results.filter(task => task !== null);
